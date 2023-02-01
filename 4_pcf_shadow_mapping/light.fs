@@ -53,7 +53,7 @@ float shadowCalculation_bias(vec4 fragPosLightSpace)
 	return shadow;
 }
 
-float pcf(vec4 fragPosLightSpace)
+/*float pcf(vec4 fragPosLightSpace)
 {
 	//-1 1 space
 	//device convert to NDC space
@@ -83,6 +83,40 @@ float pcf(vec4 fragPosLightSpace)
 	}
 
 	return shadow * 0.04f;
+}*/
+
+float pcf(vec4 fragPosLightSpace)
+{
+	//-1 1 space
+	//device convert to NDC space
+	vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
+
+	//convert to [0, 1]
+	projCoords = projCoords * 0.5f + 0.5f;
+
+	//blur radius
+	int r = 6;
+
+	float shadow = 0.0f;
+	vec2 texel_size = 1.0f / textureSize(shadow_texture, 0);
+
+	float bias = 0.02f;
+
+	//float bias = max(0.05f * (1.0f - dot(light_direction, o_normal)), 0.05f);
+
+	float current_Depth = projCoords.z;
+
+	for(int x = -r; x <= r; ++x)
+	{
+		for(int y = -r; y <= r; ++y)
+		{
+			float pcfDepth = texture(shadow_texture, projCoords.xy + vec2(x, y) * texel_size).r;
+
+			shadow += current_Depth - bias >= pcfDepth ? 1.0f : 0.0f;
+		}
+	}
+
+	return shadow / ((2 * r + 1) * (2 * r + 1));
 }
 
 void main()
